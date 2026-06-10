@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:;">
+  <title>Beermoney Intel</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="layout">
+    <nav class="sidebar">
+      <div class="brand">📊 Beermoney<br>Intel</div>
+      <button class="nav-btn active" data-view="dashboard">🏠 Dashboard</button>
+      <div class="nav-group">Research</div>
+      <button class="nav-btn" data-view="questions">❓ Top Questions</button>
+      <button class="nav-btn" data-view="sites-rank">🏆 Top Sites</button>
+      <button class="nav-btn" data-view="keywords">🔍 Keyword Explorer</button>
+      <button class="nav-btn" data-view="rising">🚀 Rising &amp; Watchlist</button>
+      <button class="nav-btn" data-view="reputation">⚠️ Reputation Monitor</button>
+      <div class="nav-group">Content</div>
+      <button class="nav-btn" data-view="ideas">💡 Idea Generator</button>
+      <button class="nav-btn" data-view="calendar">📅 Content Planner</button>
+      <div class="nav-group">Business</div>
+      <button class="nav-btn" data-view="links">🔗 Affiliate Links</button>
+      <button class="nav-btn" data-view="sites-db">🗂 Site Database</button>
+      <button class="nav-btn" data-view="revenue">💵 Revenue</button>
+      <div class="nav-spacer"></div>
+      <button class="nav-btn" data-view="settings">⚙ Settings</button>
+      <div class="data-status" id="data-status">Loading data…</div>
+    </nav>
+
+    <main class="content">
+      <div id="demo-banner" class="demo-banner hidden"></div>
+      <section id="view-dashboard" class="view"></section>
+      <section id="view-questions" class="view hidden"></section>
+      <section id="view-sites-rank" class="view hidden"></section>
+      <section id="view-keywords" class="view hidden"></section>
+      <section id="view-rising" class="view hidden"></section>
+      <section id="view-reputation" class="view hidden"></section>
+      <section id="view-ideas" class="view hidden"></section>
+      <section id="view-calendar" class="view hidden"></section>
+      <section id="view-links" class="view hidden"></section>
+      <section id="view-sites-db" class="view hidden"></section>
+      <section id="view-revenue" class="view hidden"></section>
+      <section id="view-settings" class="view hidden"></section>
+    </main>
+  </div>
+  <div id="toast" class="toast hidden"></div>
+  <script src="renderer.js"></script>
+</body>
+</html>

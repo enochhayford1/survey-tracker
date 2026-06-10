@@ -1,3 +1,10 @@
+# Survey Tracker
+
+Two tools for a survey / beermoney affiliate content business:
+
+1. **[Beermoney Intel](beermoney-intel/)** — an Electron **desktop app** for research and content intelligence: top community questions (30/60/90 days), most-mentioned survey sites with trends, keyword explorer, idea generator, content planner, affiliate link manager, site database, rising-topic alerts, reputation monitor, and revenue tracking. See [`beermoney-intel/README.md`](beermoney-intel/README.md).
+2. **Survey Earnings Tracker** (this folder) — a simple, dependency-free web app for tracking personal survey earnings, described below.
+
 # Survey Earnings Tracker
 
 A simple, dependency-free web app for tracking how much you earn from survey platforms.

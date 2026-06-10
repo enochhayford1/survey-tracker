@@ -1,0 +1,36 @@
+{
+  "name": "beermoney-intel",
+  "productName": "Beermoney Intel",
+  "version": "1.0.0",
+  "description": "Research & content intelligence desktop app for survey / beermoney affiliate businesses",
+  "main": "main.js",
+  "author": "Enoch",
+  "license": "MIT",
+  "scripts": {
+    "start": "electron .",
+    "test": "node test/analyze.test.js",
+    "dist:win": "electron-builder --win"
+  },
+  "devDependencies": {
+    "electron": "^33.2.0",
+    "electron-builder": "^25.1.8"
+  },
+  "build": {
+    "appId": "com.beermoneyintel.app",
+    "productName": "Beermoney Intel",
+    "files": [
+      "main.js",
+      "preload.js",
+      "lib/**",
+      "src/**",
+      "package.json"
+    ],
+    "win": {
+      "target": ["nsis", "portable"]
+    },
+    "nsis": {
+      "oneClick": true,
+      "perMachine": false
+    }
+  }
+}
