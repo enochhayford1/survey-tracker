@@ -44,7 +44,10 @@ const DEFAULT_SETTINGS = {
   volumeApiKey: '',
   watchlist: ['prolific waitlist', 'swagbucks payout', 'highest paying surveys'],
   aiApiKey: '',
-  aiModel: 'claude-opus-4-8'
+  aiModel: 'claude-opus-4-8',
+  myDomain: '',
+  autoRefreshMins: 0, // 0 = autopilot off; minimum 5 when on
+  alertsEnabled: true
 };
 
 function getSettings() {

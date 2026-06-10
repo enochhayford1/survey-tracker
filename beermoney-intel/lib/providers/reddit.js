@@ -6,6 +6,27 @@ const store = require('../store');
 const MAX_PAGES_PER_SUB = 8; // 8 x 100 posts covers ~90 days for these subs
 const WINDOW_DAYS = 92;
 
+// Reddit sometimes blocks one mirror while another still serves public JSON.
+// Remember which host worked so subsequent pages don't re-probe.
+const HOSTS = ['https://www.reddit.com', 'https://old.reddit.com', 'https://api.reddit.com'];
+let workingHost = null;
+
+async function getRedditJson(path) {
+  const hosts = workingHost ? [workingHost, ...HOSTS.filter((h) => h !== workingHost)] : HOSTS;
+  let lastError;
+  for (const host of hosts) {
+    try {
+      const json = await getJson(`${host}${path}`);
+      workingHost = host;
+      return json;
+    } catch (err) {
+      lastError = err;
+      workingHost = null;
+    }
+  }
+  throw lastError;
+}
+
 function pickFields(child) {
   const d = child.data;
   return {
@@ -25,8 +46,8 @@ async function fetchSubreddit(sub, { now = Date.now() } = {}) {
   const posts = [];
   let after = '';
   for (let page = 0; page < MAX_PAGES_PER_SUB; page++) {
-    const url = `https://www.reddit.com/r/${encodeURIComponent(sub)}/new.json?limit=100&raw_json=1${after ? `&after=${after}` : ''}`;
-    const json = await getJson(url);
+    const path = `/r/${encodeURIComponent(sub)}/new.json?limit=100&raw_json=1${after ? `&after=${after}` : ''}`;
+    const json = await getRedditJson(path);
     const children = json?.data?.children || [];
     if (!children.length) break;
     for (const child of children) posts.push(pickFields(child));
@@ -52,11 +73,16 @@ async function getPosts({ force = false } = {}) {
   }
 
   try {
-    const lists = await Promise.all(settings.subreddits.map((sub) => fetchSubreddit(sub)));
-    const posts = lists.flat();
+    // One blocked/misspelled subreddit shouldn't sink the whole refresh.
+    const results = await Promise.allSettled(settings.subreddits.map((sub) => fetchSubreddit(sub)));
+    const posts = results.flatMap((r) => (r.status === 'fulfilled' ? r.value : []));
+    const failures = results
+      .map((r, i) => (r.status === 'rejected' ? `r/${settings.subreddits[i]}: ${r.reason.message}` : null))
+      .filter(Boolean);
+    if (!posts.length) throw new Error(failures.join(' | ') || 'No posts returned');
     const fetchedAt = Date.now();
     store.set('reddit-cache', { fetchedAt, posts });
-    return { posts, fetchedAt, source: 'live' };
+    return { posts, fetchedAt, source: 'live', error: failures.length ? `Partial fetch — ${failures.join(' | ')}` : undefined };
   } catch (err) {
     if (cache) {
       return { posts: cache.posts, fetchedAt: cache.fetchedAt, source: 'stale-cache', error: err.message };

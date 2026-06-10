@@ -77,6 +77,17 @@ app.whenReady().then(async () => {
   ipcMain.handle('pain:mine', () => { throw new Error('no network in smoke test'); });
   ipcMain.handle('feeds:fetchAll', () => []);
   ipcMain.handle('ai:draft', () => { throw new Error('no key in smoke test'); });
+  ipcMain.handle('ai:briefing', () => { throw new Error('no key in smoke test'); });
+  ipcMain.handle('alerts:list', () => [
+    { id: 'a1', ts: Date.now(), type: 'rising', title: 'Rising fast — cover it first', body: 'Prolific paying double for a huge AI study (48.7 engagement/hr)', url: 'https://www.reddit.com/r/ProlificAc/' },
+    { id: 'a2', ts: Date.now() - 3600000, type: 'watchlist', title: 'Watchlist hit: "prolific waitlist"', body: 'How long does the Prolific waitlist take right now?', url: null }
+  ]);
+  ipcMain.handle('alerts:clear', () => true);
+  ipcMain.handle('rank:check', () => { throw new Error('no network in smoke test'); });
+  ipcMain.handle('rank:history', () => ({ 'swagbucks review': [{ date: '2026-06-01', position: 8 }, { date: '2026-06-10', position: 5 }] }));
+  ipcMain.handle('factory:queue', () => { throw new Error('no key in smoke test'); });
+  ipcMain.handle('factory:active', () => null);
+  ipcMain.handle('factory:status', () => null);
 
   const win = new BrowserWindow({
     width: 1280,
@@ -97,7 +108,7 @@ app.whenReady().then(async () => {
   await new Promise((r) => setTimeout(r, 2500));
 
   const shots = [];
-  const views = ['dashboard', 'opportunities', 'questions', 'sites-rank', 'painpoints', 'competitors', 'reputation', 'ideas', 'settings'];
+  const views = ['dashboard', 'alerts', 'opportunities', 'factory', 'briefing', 'ranktracker', 'questions', 'sites-rank', 'painpoints', 'competitors', 'reputation', 'ideas', 'settings'];
   for (const v of views) {
     await win.webContents.executeJavaScript(`document.querySelector('[data-view="${v}"]').click()`);
     if (v === 'ideas') {

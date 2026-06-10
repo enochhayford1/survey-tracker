@@ -18,6 +18,11 @@ A desktop research & content-intelligence app for running a survey / beermoney a
 - **📈 Site Momentum** — the app snapshots mention counts daily; Top Sites grows sparklines showing which sites are trending up or down over weeks, not just one period.
 - **🤖 AI Draft Writer** — paste your own Claude API key in Settings and the Idea Generator's briefs become full first drafts (blog post, YouTube script, or newsletter email), streamed live, with `[VERIFY]` markers wherever a figure needs checking and an FTC disclosure built in. Uses the official Anthropic SDK; defaults to Claude Opus 4.8.
 
+- **🏭 Draft Factory** — tick multiple opportunities and queue them all as one Claude *batch* (Message Batches API, **50% of standard token cost**). Come back to a folder of finished drafts to review, save, or copy.
+- **📰 Intelligence Briefing** — one click feeds the period's live data (top questions, site trends, complaint spikes, watchlist hits) to Claude and returns an analyst report: what to make next, what's becoming risky to promote, what's time-sensitive — plus a ready-to-send newsletter version.
+- **📊 Rank Tracker** — set your domain in Settings, add your target keywords, and check where your site ranks in the top 10 per keyword. Keeps position history with trend arrows.
+- **🔔 Autopilot & Alerts** — background auto-refresh on an interval with desktop notifications for new watchlist matches, fast-rising posts (cover them first), and complaint spikes (protect your audience). All alerts also collect in the Alerts tab.
+
 ### The 8 extra features
 3. **Keyword Explorer** — fans a seed keyword out through Google Autocomplete (question prefixes + a–z expansions) to surface what people actually type into Google. Question-type suggestions are split out — those are your article topics.
 4. **Idea Generator** — turns any question/keyword into 6 blog titles, 5 YouTube titles + 3 opening hooks, 4 email subject lines, and a full SEO article outline (with affiliate-placement pointers). One click to copy any line, export a `.md` brief, or push to the planner.

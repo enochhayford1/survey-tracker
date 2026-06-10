@@ -25,6 +25,21 @@ contextBridge.exposeInMainWorld('api', {
     ipcRenderer.removeAllListeners('ai:draft:chunk');
     ipcRenderer.on('ai:draft:chunk', (_e, text) => cb(text));
   },
+  aiBriefing: () => ipcRenderer.invoke('ai:briefing'),
+  onBriefingChunk: (cb) => {
+    ipcRenderer.removeAllListeners('ai:briefing:chunk');
+    ipcRenderer.on('ai:briefing:chunk', (_e, text) => cb(text));
+  },
+
+  rankCheck: () => ipcRenderer.invoke('rank:check'),
+  rankHistory: () => ipcRenderer.invoke('rank:history'),
+
+  factoryQueue: (items) => ipcRenderer.invoke('factory:queue', { items }),
+  factoryActive: () => ipcRenderer.invoke('factory:active'),
+  factoryStatus: () => ipcRenderer.invoke('factory:status'),
+
+  alertsList: () => ipcRenderer.invoke('alerts:list'),
+  alertsClear: () => ipcRenderer.invoke('alerts:clear'),
 
   generateIdeas: (topic, site) => ipcRenderer.invoke('ideas:generate', { topic, site }),
 

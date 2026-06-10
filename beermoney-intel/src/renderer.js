@@ -98,7 +98,15 @@ async function refreshStatus(force = false) {
   el.innerHTML = `${h(sourceLabel(s.source))} · ${s.postCount} posts<br><span class="muted">Fetched: ${h(when)}</span>`;
   const banner = $('#demo-banner');
   if (s.source === 'demo') {
-    banner.textContent = '⚠ Showing bundled demo data — Reddit could not be reached and no cache exists yet. Check your connection, then hit Refresh in Settings.';
+    banner.innerHTML = `⚠ Showing bundled demo data — Reddit could not be reached and no cache exists yet.<br><span class="small">Error: ${h(s.error || 'unknown')}</span><br><button class="btn btn-sm" id="banner-retry">🔄 Retry now</button>`;
+    banner.classList.remove('hidden');
+    $('#banner-retry')?.addEventListener('click', async () => {
+      $('#banner-retry').textContent = 'Retrying…';
+      await refreshStatus(true);
+      renderers[currentView]?.();
+    });
+  } else if (s.source === 'stale-cache') {
+    banner.innerHTML = `⚠ Refresh failed — showing the last cached data. <span class="small">Error: ${h(s.error || 'unknown')}</span>`;
     banner.classList.remove('hidden');
   } else {
     banner.classList.add('hidden');
@@ -147,6 +155,239 @@ renderers.dashboard = async function () {
     : '<div class="empty">No watchlist matches. Add terms under Rising &amp; Watchlist.</div>';
 
   bindExternalLinks(view);
+};
+
+// ---------- Alerts ----------
+renderers.alerts = async function () {
+  const view = $('#view-alerts');
+  view.innerHTML = `<h1>Alerts</h1><p class="subtitle">Watchlist hits, fast-rising posts, and complaint spikes — caught automatically. Turn on Autopilot in Settings to get these as desktop notifications while the app runs in the background.</p>
+    <div class="toolbar"><button class="btn" id="alerts-clear">Clear all</button></div>
+    <div class="card"><div id="alerts-list">Loading…</div></div>`;
+  async function render() {
+    const alerts = await api.alertsList();
+    const icon = { watchlist: '👀', rising: '🚀', reputation: '⚠️' };
+    $('#alerts-list').innerHTML = alerts.length
+      ? alerts.map((a) => `<div class="rank-row"><div class="rank-num">${icon[a.type] || '🔔'}</div>
+          <div class="rank-main"><div class="rank-title">${a.url ? `<a href="${h(a.url)}" data-ext>${h(a.title)}</a>` : h(a.title)}</div>
+          <div class="rank-meta">${h(a.body)} · ${new Date(a.ts).toLocaleString()}</div></div></div>`).join('')
+      : '<div class="empty">No alerts yet. They appear after data refreshes find something new.</div>';
+    bindExternalLinks(view);
+  }
+  $('#alerts-clear').addEventListener('click', async () => { await api.alertsClear(); render(); });
+  render();
+};
+
+// ---------- Draft Factory ----------
+renderers.factory = async function () {
+  const view = $('#view-factory');
+  view.innerHTML = `<h1>Draft Factory</h1><p class="subtitle">Queue a whole batch of drafts at once through the Claude Batches API — <strong>50% of normal token cost</strong>, usually ready within the hour. Pick opportunities, queue, come back to finished drafts.</p>
+    <div id="factory-active"></div>
+    <div class="card" id="factory-picker"><h2>Queue new batch</h2><div id="factory-opps">Loading opportunities…</div>
+      <div class="toolbar"><select id="factory-type"><option value="blog">Blog posts</option><option value="video">YouTube scripts</option><option value="email">Newsletter emails</option></select>
+      <button class="btn btn-primary" id="factory-go">🏭 Queue selected drafts</button></div></div>
+    <div class="card"><h2>Finished drafts</h2><div id="factory-drafts"></div></div>`;
+
+  async function renderActive() {
+    const active = await api.factoryActive();
+    if (!active) {
+      $('#factory-active').innerHTML = '';
+      $('#factory-picker').classList.remove('hidden');
+      return;
+    }
+    $('#factory-picker').classList.add('hidden');
+    $('#factory-active').innerHTML = `<div class="card"><h2>⏳ Batch in progress (${active.items.length} drafts)</h2>
+      <p class="muted small">Queued ${new Date(active.createdAt).toLocaleString()}. Status checks automatically while this tab is open.</p>
+      <div id="factory-status" class="muted">Checking status…</div>
+      <div class="toolbar"><button class="btn" id="factory-check">🔄 Check now</button></div></div>`;
+    $('#factory-check').addEventListener('click', poll);
+    poll();
+  }
+
+  async function poll() {
+    if (currentView !== 'factory') return;
+    try {
+      const s = await api.factoryStatus();
+      if (!s) return renderActive();
+      if (s.done) {
+        toast('Batch finished — drafts are ready');
+        renderActive();
+        renderDrafts();
+        return;
+      }
+      const el = $('#factory-status');
+      if (el) el.textContent = `Status: ${s.status} · succeeded ${s.counts?.succeeded ?? 0} · processing ${s.counts?.processing ?? 0} · errored ${s.counts?.errored ?? 0}`;
+      setTimeout(poll, 45000);
+    } catch (err) {
+      const el = $('#factory-status');
+      if (el) el.innerHTML = `<span class="danger-text">Status check failed: ${h(err.message)}</span>`;
+    }
+  }
+
+  async function renderPicker() {
+    const res = await api.opportunities(30);
+    $('#factory-opps').innerHTML = res.items.length
+      ? res.items.slice(0, 20).map((o) => `<div class="rank-row"><div class="rank-num"><input type="checkbox" data-pick="${h(o.title)}"></div>
+          <div class="score-badge ${o.score >= 70 ? 'hot' : o.score >= 45 ? 'warm' : ''}">${o.score}</div>
+          <div class="rank-main"><div class="rank-title">${h(o.title)}</div></div></div>`).join('')
+      : '<div class="empty">No opportunities loaded.</div>';
+  }
+
+  async function renderDrafts() {
+    const drafts = await api.getCollection('drafts');
+    $('#factory-drafts').innerHTML = drafts.length
+      ? drafts.map((d) => `<div class="rank-row"><div class="rank-num">${d.error ? '❌' : '📄'}</div>
+          <div class="rank-main"><div class="rank-title">${h(d.topic)}</div>
+          <div class="rank-meta">${h(d.contentType)} · ${new Date(d.createdAt).toLocaleString()}${d.error ? ` · <span class="danger-text">${h(d.error)}</span>` : ''}</div>
+          <div class="draft-output hidden" data-body="${h(d.id)}">${h(d.text || '')}</div></div>
+          <div class="rank-actions">${d.text ? `<button class="btn btn-sm" data-show="${h(d.id)}">👁</button>
+          <button class="btn btn-sm" data-save="${h(d.id)}">⬇</button><button class="btn btn-sm" data-copy-draft="${h(d.id)}">📋</button>` : ''}
+          <button class="btn btn-sm btn-danger" data-del="${h(d.id)}">✕</button></div></div>`).join('')
+      : '<div class="empty">No finished drafts yet.</div>';
+    const byId = Object.fromEntries(drafts.map((d) => [d.id, d]));
+    $$('[data-show]', view).forEach((b) => b.addEventListener('click', () => $(`[data-body="${CSS.escape(b.dataset.show)}"]`).classList.toggle('hidden')));
+    $$('[data-save]', view).forEach((b) => b.addEventListener('click', () => {
+      const d = byId[b.dataset.save];
+      download(`draft-${d.topic.toLowerCase().replace(/[^a-z0-9]+/g, '-').slice(0, 50)}.md`, d.text, 'text/markdown');
+    }));
+    $$('[data-copy-draft]', view).forEach((b) => b.addEventListener('click', () => copyText(byId[b.dataset.copyDraft].text)));
+    $$('[data-del]', view).forEach((b) => b.addEventListener('click', async () => {
+      await api.setCollection('drafts', (await api.getCollection('drafts')).filter((d) => d.id !== b.dataset.del));
+      renderDrafts();
+    }));
+  }
+
+  $('#factory-go').addEventListener('click', async () => {
+    const settings = await api.getSettings();
+    if (!settings.aiApiKey) {
+      toast('Add your Claude API key in Settings first');
+      showView('settings');
+      return;
+    }
+    const picked = $$('[data-pick]:checked', view).map((c) => c.dataset.pick);
+    if (!picked.length) return toast('Tick at least one opportunity');
+    const type = $('#factory-type').value;
+    $('#factory-go').disabled = true;
+    try {
+      await api.factoryQueue(picked.map((topic, i) => ({ id: `d${Date.now()}-${i}`, topic, contentType: type })));
+      toast(`Queued ${picked.length} drafts at 50% token cost`);
+      renderActive();
+    } catch (err) {
+      toast(`Queue failed: ${err.message}`);
+    } finally {
+      $('#factory-go').disabled = false;
+    }
+  });
+
+  renderActive();
+  renderPicker();
+  renderDrafts();
+};
+
+// ---------- Intelligence Briefing ----------
+renderers.briefing = function () {
+  const view = $('#view-briefing');
+  view.innerHTML = `<h1>Intelligence Briefing</h1><p class="subtitle">One click: Claude analyzes this period's questions, site trends, complaints, and watchlist hits, then tells you exactly what to make next — including a ready-to-send newsletter version.</p>
+    <div class="toolbar"><button class="btn btn-primary" id="brief-go">📰 Generate briefing</button>
+    <button class="btn hidden" id="brief-save">⬇ Save .md</button><button class="btn hidden" id="brief-copy">📋 Copy</button></div>
+    <div id="brief-output" class="draft-output hidden"></div>`;
+
+  $('#brief-go').addEventListener('click', async () => {
+    const settings = await api.getSettings();
+    if (!settings.aiApiKey) {
+      toast('Add your Claude API key in Settings first');
+      showView('settings');
+      return;
+    }
+    const btn = $('#brief-go');
+    const out = $('#brief-output');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner">◐</span> Analyzing…';
+    out.classList.remove('hidden');
+    out.textContent = '';
+    api.onBriefingChunk((t) => { out.textContent += t; out.scrollTop = out.scrollHeight; });
+    try {
+      const text = await api.aiBriefing();
+      out.textContent = text;
+      $('#brief-save').classList.remove('hidden');
+      $('#brief-copy').classList.remove('hidden');
+      $('#brief-save').onclick = () => download(`briefing-${new Date().toISOString().slice(0, 10)}.md`, text, 'text/markdown');
+      $('#brief-copy').onclick = () => copyText(text);
+    } catch (err) {
+      out.textContent = `Briefing failed: ${err.message}`;
+    } finally {
+      btn.disabled = false;
+      btn.textContent = '📰 Generate briefing';
+    }
+  });
+};
+
+// ---------- Rank Tracker ----------
+renderers.ranktracker = async function () {
+  const view = $('#view-ranktracker');
+  const settings = await api.getSettings();
+  view.innerHTML = `<h1>Rank Tracker</h1><p class="subtitle">Where does <strong>${h(settings.myDomain || 'your site (set it in Settings)')}</strong> rank for your target keywords? Checks the top 10 results per keyword and keeps position history.</p>
+    <div class="toolbar"><input id="rank-kw" placeholder="e.g. swagbucks review" style="width:280px">
+    <button class="btn" id="rank-add">Add keyword</button>
+    <button class="btn btn-primary" id="rank-check">📊 Check all rankings</button></div>
+    <div class="card"><div id="rank-list">Loading…</div></div>`;
+
+  function posLabel(p) {
+    if (p == null) return '<span class="muted">not in top 10</span>';
+    return `<span class="${p <= 3 ? 'ok-text' : p <= 10 ? 'warn-text' : ''}">#${p}</span>`;
+  }
+
+  async function render(checkResults) {
+    const tracks = await api.getCollection('ranktracks');
+    const history = await api.rankHistory();
+    $('#rank-list').innerHTML = tracks.length
+      ? tracks.map((t) => {
+          const hist = history[t.keyword] || [];
+          const latest = checkResults?.find((r) => r.keyword === t.keyword) || (hist.length ? { position: hist[hist.length - 1].position } : null);
+          const prev = hist.length >= 2 ? hist[hist.length - 2].position : null;
+          let trend = '';
+          if (latest && prev != null && latest.position != null) {
+            const d = prev - latest.position;
+            trend = d > 0 ? `<span class="trend-up">▲ +${d}</span>` : d < 0 ? `<span class="trend-down">▼ ${d}</span>` : '<span class="trend-flat">—</span>';
+          }
+          return `<div class="rank-row"><div class="rank-main">
+            <div class="rank-title">${h(t.keyword)} · ${latest ? posLabel(latest.position) : '<span class="muted">never checked</span>'} ${trend}</div>
+            <div class="rank-meta">${latest?.error ? `<span class="danger-text">${h(latest.error)}</span>` : hist.length ? `${hist.length} check${hist.length === 1 ? '' : 's'} · history: ${hist.slice(-8).map((e) => (e.position == null ? '·' : e.position)).join(' → ')}` : ''}</div></div>
+            <div class="rank-actions"><button class="btn btn-sm btn-danger" data-del="${h(t.id)}">✕</button></div></div>`;
+        }).join('')
+      : '<div class="empty">No keywords tracked yet. Add the keywords your published articles target.</div>';
+    $$('[data-del]', view).forEach((b) => b.addEventListener('click', async () => {
+      await api.setCollection('ranktracks', (await api.getCollection('ranktracks')).filter((t) => t.id !== b.dataset.del));
+      render();
+    }));
+  }
+
+  $('#rank-add').addEventListener('click', async () => {
+    const keyword = $('#rank-kw').value.trim().toLowerCase();
+    if (!keyword) return;
+    const tracks = await api.getCollection('ranktracks');
+    if (!tracks.some((t) => t.keyword === keyword)) {
+      tracks.push({ id: uid(), keyword });
+      await api.setCollection('ranktracks', tracks);
+    }
+    $('#rank-kw').value = '';
+    render();
+  });
+  $('#rank-check').addEventListener('click', async () => {
+    const btn = $('#rank-check');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner">◐</span> Checking…';
+    try {
+      const res = await api.rankCheck();
+      toast(`Checked ${res.results.length} keywords for ${res.domain}`);
+      render(res.results);
+    } catch (err) {
+      toast(err.message);
+    } finally {
+      btn.disabled = false;
+      btn.textContent = '📊 Check all rankings';
+    }
+  });
+  render();
 };
 
 // ---------- Opportunities ----------
@@ -804,6 +1045,17 @@ renderers.settings = async function () {
       <div class="form-grid">
         <div class="field"><label>Claude API key</label><input id="set-ai-key" type="password" value="${h(settings.aiApiKey)}" placeholder="sk-ant-…"></div>
         <div class="field"><label>Model</label><select id="set-ai-model">${aiModels.map((m) => `<option value="${h(m.id)}" ${m.id === settings.aiModel ? 'selected' : ''}>${h(m.label)}</option>`).join('')}</select></div>
+      </div></div>
+    <div class="card"><h2>📊 Your website</h2>
+      <div class="field"><label>Domain (for the Rank Tracker, e.g. mysurveyblog.com)</label>
+      <input id="set-domain" value="${h(settings.myDomain)}" placeholder="yoursite.com" style="width:280px"></div></div>
+    <div class="card"><h2>🔔 Autopilot &amp; alerts</h2>
+      <p class="muted small">Autopilot refreshes Reddit data in the background and fires desktop notifications for watchlist hits, fast-rising posts, and complaint spikes — keep the app running minimized.</p>
+      <div class="form-grid">
+        <div class="field"><label>Auto-refresh every (minutes, 0 = off, min 5)</label>
+        <input id="set-autorefresh" type="number" min="0" max="720" value="${h(settings.autoRefreshMins)}" style="width:90px"></div>
+        <div class="field"><label>Desktop notifications</label>
+        <select id="set-alerts"><option value="1" ${settings.alertsEnabled ? 'selected' : ''}>On</option><option value="0" ${settings.alertsEnabled ? '' : 'selected'}>Off</option></select></div>
       </div></div>`;
 
   $('#set-save').addEventListener('click', async () => {
@@ -813,7 +1065,10 @@ renderers.settings = async function () {
       volumeProvider: $('#set-provider').value,
       volumeApiKey: $('#set-key').value.trim(),
       aiApiKey: $('#set-ai-key').value.trim(),
-      aiModel: $('#set-ai-model').value
+      aiModel: $('#set-ai-model').value,
+      myDomain: $('#set-domain').value.trim(),
+      autoRefreshMins: Math.max(0, parseInt($('#set-autorefresh').value, 10) || 0),
+      alertsEnabled: $('#set-alerts').value === '1'
     });
     toast('Settings saved');
   });
