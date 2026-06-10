@@ -62,6 +62,14 @@ const swagRep = rep.find((r) => r.id === 'swagbucks');
 assert.ok(swagRep, 'Swagbucks ban post flagged');
 assert.ok(swagRep.samples.length > 0 && swagRep.samples[0].url.startsWith('https://www.reddit.com'));
 
+// --- demo data permalinks point at each post's own subreddit ---
+for (const p of posts) {
+  assert.ok(p.permalink.startsWith(`/r/${p.subreddit}/`), `permalink matches subreddit: ${p.permalink} vs r/${p.subreddit}`);
+  assert.ok(p.permalink.includes(encodeURIComponent(p.title).slice(0, 20)), 'permalink deep-links to a search for the title');
+}
+const demoQuestions = analyze.topQuestions(posts, 90, { now: NOW });
+assert.ok(new Set(demoQuestions.map((q) => q.url.split('/')[4])).size > 1, 'question links span multiple subreddits');
+
 // --- watchlist ---
 const watch = analyze.watchlistMatches(posts, ['prolific waitlist', 'zzz-no-match'], 90, { now: NOW });
 assert.strictEqual(watch.length, 2);

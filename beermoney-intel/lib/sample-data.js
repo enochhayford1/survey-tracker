@@ -51,12 +51,20 @@ const NEUTRAL_TITLES = [
 
 const SUBS = ['beermoney', 'SwagBucks', 'ProlificAc', 'WorkOnline'];
 
+// Demo posts are fictional, so a real post permalink doesn't exist; link to a
+// Reddit search for the title in the post's own subreddit instead, which
+// surfaces the real threads on the same topic.
+function searchPermalink(sub, title) {
+  return `/r/${sub}/search/?q=${encodeURIComponent(title)}&restrict_sr=on`;
+}
+
 function buildSamplePosts(now = Date.now()) {
   const posts = [];
   let i = 0;
   for (const [title, score, comments] of QUESTION_TITLES) {
     // Spread deterministically across the last 90 days.
     const ageDays = (i * 7 + 2) % 88;
+    const subreddit = SUBS[i % SUBS.length];
     posts.push({
       id: `demo-q${i}`,
       title,
@@ -64,13 +72,14 @@ function buildSamplePosts(now = Date.now()) {
       score,
       num_comments: comments,
       created_utc: Math.floor(now / 1000) - ageDays * 86400 - i * 3600,
-      subreddit: SUBS[i % SUBS.length],
-      permalink: '/r/beermoney/'
+      subreddit,
+      permalink: searchPermalink(subreddit, title)
     });
     i++;
   }
   for (const [title, score, comments] of NEUTRAL_TITLES) {
     const ageDays = (i * 11 + 1) % 85;
+    const subreddit = SUBS[i % SUBS.length];
     posts.push({
       id: `demo-n${i}`,
       title,
@@ -78,15 +87,17 @@ function buildSamplePosts(now = Date.now()) {
       score,
       num_comments: comments,
       created_utc: Math.floor(now / 1000) - ageDays * 86400 - i * 5400,
-      subreddit: SUBS[i % SUBS.length],
-      permalink: '/r/beermoney/'
+      subreddit,
+      permalink: searchPermalink(subreddit, title)
     });
     i++;
   }
   // A couple of very recent posts so "Rising" has data in demo mode.
+  const rising1 = 'Prolific paying double for a huge AI study right now';
+  const rising2 = 'Is the new Swagbucks Magic Receipts update worth it?';
   posts.push(
-    { id: 'demo-r1', title: 'Prolific paying double for a huge AI study right now', selftext: '', score: 240, num_comments: 75, created_utc: Math.floor(now / 1000) - 8 * 3600, subreddit: 'ProlificAc', permalink: '/r/ProlificAc/' },
-    { id: 'demo-r2', title: 'Is the new Swagbucks Magic Receipts update worth it?', selftext: '', score: 95, num_comments: 41, created_utc: Math.floor(now / 1000) - 20 * 3600, subreddit: 'SwagBucks', permalink: '/r/SwagBucks/' }
+    { id: 'demo-r1', title: rising1, selftext: '', score: 240, num_comments: 75, created_utc: Math.floor(now / 1000) - 8 * 3600, subreddit: 'ProlificAc', permalink: searchPermalink('ProlificAc', rising1) },
+    { id: 'demo-r2', title: rising2, selftext: '', score: 95, num_comments: 41, created_utc: Math.floor(now / 1000) - 20 * 3600, subreddit: 'SwagBucks', permalink: searchPermalink('SwagBucks', rising2) }
   );
   return posts;
 }
