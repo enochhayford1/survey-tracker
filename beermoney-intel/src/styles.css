@@ -153,3 +153,26 @@ tr:hover td { background: rgba(79, 140, 255, .04); }
 .danger-text { color: var(--danger); }
 .ok-text { color: var(--accent-2); }
 .warn-text { color: var(--warn); }
+
+/* ---- Opportunities ---- */
+.score-badge {
+  display: inline-flex; align-items: center; justify-content: center;
+  min-width: 44px; height: 34px; border-radius: 8px; font-weight: 700; font-size: 15px;
+  background: var(--panel-2); border: 1px solid var(--border); flex-shrink: 0;
+}
+.score-badge.hot { color: var(--accent-2); border-color: var(--accent-2); }
+.score-badge.warm { color: var(--warn); border-color: var(--warn); }
+.breakdown-chips { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 4px; }
+
+/* ---- Sparklines ---- */
+.spark { display: inline-flex; align-items: flex-end; gap: 1px; height: 18px; margin-left: 8px; vertical-align: middle; }
+.spark span { width: 4px; background: var(--accent); border-radius: 1px; min-height: 1px; opacity: .85; }
+
+/* ---- AI draft ---- */
+.draft-output {
+  background: var(--panel-2); border: 1px solid var(--border); border-radius: var(--radius);
+  padding: 14px 16px; white-space: pre-wrap; font-size: 13px; line-height: 1.6;
+  max-height: 480px; overflow-y: auto; margin-top: 10px;
+}
+.spinner { display: inline-block; animation: spin 1s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }

@@ -10,6 +10,14 @@ A desktop research & content-intelligence app for running a survey / beermoney a
 1. **Top Questions** — the 20 most-asked, most-discussed survey/beermoney questions over the last **30 / 60 / 90 days**, ranked by community engagement (Reddit score + 2× comments) across r/beermoney, r/SwagBucks, r/ProlificAc, r/WorkOnline (configurable). Every question links to the source thread and can be exported as CSV or a Markdown brief.
 2. **Top Sites** — the most talked-about survey/beermoney sites in the same windows, with mention counts, an engagement bar chart, and a **trend arrow vs the previous period** so you can see which sites are heating up or cooling off.
 
+### Power features
+- **🎯 Opportunity Engine** — every trending question scored 0-100 from four signals: community engagement (0-50), freshness (0-20), whether your Content Planner already covers it (0-15), and SERP competition weakness (0-15). One ranked "what to make next" list.
+- **🔍 SERP Competition Checker** — checks who actually ranks for a keyword (via DuckDuckGo, no API key) and classifies domains as weak (Reddit/Quora/forums — you can outrank them) vs strong (NerdWallet, Penny Hoarder…). Cached 7 days per keyword.
+- **🧠 Pain Point Miner** — pulls hundreds of comments from the top threads about a site and extracts the most-repeated phrases and complaint sentences. Comment-level intel your competitors never see.
+- **🕵️ Competitor Tracker** — follow competing blogs (RSS) and YouTube channels (channel feed) — latest posts, publishing cadence, one-click idea generation from their headlines.
+- **📈 Site Momentum** — the app snapshots mention counts daily; Top Sites grows sparklines showing which sites are trending up or down over weeks, not just one period.
+- **🤖 AI Draft Writer** — paste your own Claude API key in Settings and the Idea Generator's briefs become full first drafts (blog post, YouTube script, or newsletter email), streamed live, with `[VERIFY]` markers wherever a figure needs checking and an FTC disclosure built in. Uses the official Anthropic SDK; defaults to Claude Opus 4.8.
+
 ### The 8 extra features
 3. **Keyword Explorer** — fans a seed keyword out through Google Autocomplete (question prefixes + a–z expansions) to surface what people actually type into Google. Question-type suggestions are split out — those are your article topics.
 4. **Idea Generator** — turns any question/keyword into 6 blog titles, 5 YouTube titles + 3 opening hooks, 4 email subject lines, and a full SEO article outline (with affiliate-placement pointers). One click to copy any line, export a `.md` brief, or push to the planner.

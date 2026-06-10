@@ -13,6 +13,19 @@ contextBridge.exposeInMainWorld('api', {
   exploreKeywords: (seed) => ipcRenderer.invoke('keywords:explore', { seed }),
   volumeProviders: () => ipcRenderer.invoke('keywords:providers'),
 
+  opportunities: (days) => ipcRenderer.invoke('opps:list', { days }),
+  checkCompetition: (keyword, force) => ipcRenderer.invoke('serp:check', { keyword, force }),
+  minePainPoints: (siteId) => ipcRenderer.invoke('pain:mine', { siteId }),
+  fetchCompetitorFeeds: () => ipcRenderer.invoke('feeds:fetchAll'),
+  siteHistory: () => ipcRenderer.invoke('intel:siteHistory'),
+
+  aiDraft: (opts) => ipcRenderer.invoke('ai:draft', opts),
+  aiModels: () => ipcRenderer.invoke('ai:models'),
+  onDraftChunk: (cb) => {
+    ipcRenderer.removeAllListeners('ai:draft:chunk');
+    ipcRenderer.on('ai:draft:chunk', (_e, text) => cb(text));
+  },
+
   generateIdeas: (topic, site) => ipcRenderer.invoke('ideas:generate', { topic, site }),
 
   listSites: () => ipcRenderer.invoke('sites:list'),

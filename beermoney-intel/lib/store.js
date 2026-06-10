@@ -42,7 +42,9 @@ const DEFAULT_SETTINGS = {
   cacheTtlHours: 6,
   volumeProvider: 'none', // 'none' | future paid providers, see lib/providers/index.js
   volumeApiKey: '',
-  watchlist: ['prolific waitlist', 'swagbucks payout', 'highest paying surveys']
+  watchlist: ['prolific waitlist', 'swagbucks payout', 'highest paying surveys'],
+  aiApiKey: '',
+  aiModel: 'claude-opus-4-8'
 };
 
 function getSettings() {

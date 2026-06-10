@@ -149,6 +149,136 @@ renderers.dashboard = async function () {
   bindExternalLinks(view);
 };
 
+// ---------- Opportunities ----------
+renderers.opportunities = function () {
+  const view = $('#view-opportunities');
+  view.innerHTML = `<h1>Opportunities</h1><p class="subtitle">Every trending question scored 0-100 on engagement, freshness, whether you've covered it, and how weak the Google competition is. Work from the top down.</p>
+    <div class="toolbar" id="opp-toolbar"></div><div class="card"><div id="opp-list">Loading…</div></div>`;
+
+  let lastDays = 30;
+  async function render(days) {
+    lastDays = days;
+    $('#opp-list').textContent = 'Loading…';
+    const res = await api.opportunities(days);
+    $('#opp-list').innerHTML = res.items.length
+      ? res.items.map((o, i) => {
+          const cls = o.score >= 70 ? 'hot' : o.score >= 45 ? 'warm' : '';
+          const diff = o.difficulty != null
+            ? `<span class="pill ${o.difficulty <= 40 ? 'q' : ''}">SERP difficulty ${o.difficulty}/100${o.weakInTop5 ? ` · ${o.weakInTop5} weak in top 5` : ''}</span>`
+            : `<button class="btn btn-sm" data-serp="${h(o.title)}">🔍 Check competition</button>`;
+          return `<div class="rank-row"><div class="rank-num">${i + 1}</div>
+            <div class="score-badge ${cls}">${o.score}</div>
+            <div class="rank-main"><div class="rank-title"><a href="${h(o.url)}" data-ext>${h(o.title)}</a></div>
+            <div class="breakdown-chips">
+              <span class="pill">engagement ${o.breakdown.engagementPts}/50</span>
+              <span class="pill">freshness ${o.breakdown.recencyPts}/20</span>
+              ${o.covered ? '<span class="pill">already in planner</span>' : '<span class="pill q">not covered +15</span>'}
+              ${diff}
+            </div></div>
+            <div class="rank-actions"><button class="btn btn-sm" data-idea="${h(o.title)}">💡 Ideas</button></div></div>`;
+        }).join('')
+      : '<div class="empty">No questions in this window.</div>';
+    bindExternalLinks(view);
+    $$('[data-idea]', view).forEach((b) => b.addEventListener('click', () => openIdeas(b.dataset.idea)));
+    $$('[data-serp]', view).forEach((b) => b.addEventListener('click', async () => {
+      b.textContent = 'Checking…';
+      b.disabled = true;
+      try {
+        await api.checkCompetition(b.dataset.serp);
+        render(lastDays);
+      } catch (err) {
+        b.textContent = '🔍 Check competition';
+        b.disabled = false;
+        toast(`SERP check failed: ${err.message}`);
+      }
+    }));
+  }
+  $('#opp-toolbar').appendChild(daysSegment(render));
+};
+
+// ---------- Pain Points ----------
+renderers.painpoints = async function () {
+  const view = $('#view-painpoints');
+  if (view.dataset.ready) return;
+  view.dataset.ready = '1';
+  const sites = await api.listSites();
+  view.innerHTML = `<h1>Pain Points</h1><p class="subtitle">Mines the comments of the top threads about a site to surface what users actually complain about and repeat — angles your competitors never see because they only read headlines.</p>
+    <div class="toolbar"><select id="pain-site">${sites.map((s) => `<option value="${h(s.id)}">${h(s.name)}</option>`).join('')}</select>
+    <button class="btn btn-primary" id="pain-go">⛏ Mine comments</button></div>
+    <div id="pain-output"></div>`;
+
+  $('#pain-go').addEventListener('click', async () => {
+    const out = $('#pain-output');
+    out.innerHTML = '<div class="card"><div class="empty">Fetching threads and comments — this takes a few seconds…</div></div>';
+    try {
+      const r = await api.minePainPoints($('#pain-site').value);
+      out.innerHTML = `
+        <div class="card"><h2>Mined ${r.commentCount} comments from ${r.threads.length} threads about ${h(r.site)}</h2>
+          ${r.threads.map((t) => `<div class="rank-meta">↳ <a href="${h(t.url)}" data-ext>${h(t.title)}</a> (${t.comments} comments)</div>`).join('')}</div>
+        <div class="card"><h2>🔁 Most repeated phrases</h2>
+          ${r.phrases.length ? r.phrases.map((p) => `<div class="rank-row"><div class="rank-num">${p.count}×</div>
+            <div class="rank-main"><div class="rank-title">"${h(p.phrase)}"</div>
+            <div class="rank-meta">${h(p.sample)}</div></div>
+            <div class="rank-actions"><button class="btn btn-sm" data-idea="${h(r.site)} ${h(p.phrase)}">💡</button></div></div>`).join('')
+          : '<div class="empty">No strongly repeated phrases found.</div>'}</div>
+        <div class="card"><h2>😤 Complaints worth addressing in your content</h2>
+          ${r.complaints.length ? r.complaints.map((c) => `<div class="rank-row"><div class="rank-main"><div class="rank-meta">"${h(c)}"</div></div></div>`).join('')
+          : '<div class="empty">No complaint sentences found. 🎉</div>'}</div>`;
+      bindExternalLinks(out);
+      $$('[data-idea]', out).forEach((b) => b.addEventListener('click', () => openIdeas(b.dataset.idea)));
+    } catch (err) {
+      out.innerHTML = `<div class="card"><div class="empty danger-text">${h(err.message)}</div></div>`;
+    }
+  });
+};
+
+// ---------- Competitors ----------
+renderers.competitors = async function () {
+  const view = $('#view-competitors');
+  view.innerHTML = `<h1>Competitors</h1><p class="subtitle">Track competing blogs and YouTube channels by feed. See what they publish, how often, and steal the angles they're missing.</p>
+    <div class="card"><h2>Add competitor</h2><div class="form-grid">
+      <div class="field"><label>Name</label><input id="comp-name" placeholder="e.g. Side Hustle Nation"></div>
+      <div class="field"><label>RSS feed URL or YouTube channel URL/ID</label><input id="comp-url" placeholder="https://…/feed or youtube.com/channel/UC…"></div>
+      <div class="field"><button class="btn btn-primary" id="comp-add">Add</button></div></div>
+      <p class="muted small">Blogs: most have a feed at <span class="mono">/feed</span> or <span class="mono">/rss</span>. YouTube: use the channel URL containing <span class="mono">/channel/UC…</span> (visible in any video's description page source, or via the channel's About → Share).</p></div>
+    <div class="card"><div class="toolbar"><h2 style="margin:0;flex:1">Latest from competitors</h2><button class="btn" id="comp-refresh">🔄 Refresh feeds</button></div><div id="comp-list">Loading…</div></div>`;
+
+  async function renderList() {
+    const competitors = await api.getCollection('competitors');
+    if (!competitors.length) {
+      $('#comp-list').innerHTML = '<div class="empty">No competitors tracked yet.</div>';
+      return;
+    }
+    $('#comp-list').innerHTML = '<div class="empty">Fetching feeds…</div>';
+    const results = await api.fetchCompetitorFeeds();
+    $('#comp-list').innerHTML = results.map((c) => `
+      <div class="rank-row"><div class="rank-main">
+        <div class="rank-title">${h(c.name)} <span class="muted small">· ${c.error ? `<span class="danger-text">feed error: ${h(c.error)}</span>` : `${c.perMonth} posts in last 30 days`}</span></div>
+        ${(c.items || []).slice(0, 5).map((it) => `<div class="rank-meta">↳ ${it.date ? new Date(it.date).toLocaleDateString() : '—'} · <a href="${h(it.link)}" data-ext>${h(it.title)}</a> <button class="btn btn-sm" data-idea="${h(it.title)}">💡</button></div>`).join('')}
+      </div>
+      <div class="rank-actions"><button class="btn btn-sm btn-danger" data-del="${h(c.id)}">✕</button></div></div>`).join('');
+    bindExternalLinks(view);
+    $$('[data-idea]', view).forEach((b) => b.addEventListener('click', () => openIdeas(b.dataset.idea)));
+    $$('[data-del]', view).forEach((b) => b.addEventListener('click', async () => {
+      await api.setCollection('competitors', (await api.getCollection('competitors')).filter((c) => c.id !== b.dataset.del));
+      renderList();
+    }));
+  }
+
+  $('#comp-add').addEventListener('click', async () => {
+    const name = $('#comp-name').value.trim();
+    const url = $('#comp-url').value.trim();
+    if (!name || !url) return toast('Name and feed URL are both needed');
+    const items = await api.getCollection('competitors');
+    items.push({ id: uid(), name, url });
+    await api.setCollection('competitors', items);
+    $('#comp-name').value = ''; $('#comp-url').value = '';
+    renderList();
+  });
+  $('#comp-refresh').addEventListener('click', renderList);
+  renderList();
+};
+
 // ---------- Top Questions ----------
 renderers.questions = function () {
   const view = $('#view-questions');
@@ -197,21 +327,32 @@ renderers['sites-rank'] = function () {
   const view = $('#view-sites-rank');
   view.innerHTML = `<h1>Top Sites</h1><p class="subtitle">Most talked-about survey/beermoney sites — ranked by community mentions, with trend vs the previous period.</p><div class="toolbar" id="s-toolbar"></div><div class="card"><div id="s-list">Loading…</div></div>`;
 
+  function sparkline(history, siteId) {
+    if (history.length < 2) return '';
+    const points = history.slice(-14).map((snap) => snap.counts[siteId] || 0);
+    const max = Math.max(1, ...points);
+    return `<span class="spark" title="30-day mention count over the last ${points.length} snapshots">${points
+      .map((p) => `<span style="height:${Math.max(6, Math.round((p / max) * 100))}%"></span>`).join('')}</span>`;
+  }
+
   $('#s-toolbar').appendChild(daysSegment(async (days) => {
     $('#s-list').textContent = 'Loading…';
-    const res = await api.topSites(days);
+    const [res, history] = await Promise.all([api.topSites(days), api.siteHistory()]);
     const max = Math.max(1, ...res.items.map((s) => s.mentions));
     $('#s-list').innerHTML = res.items.length
       ? res.items.map((s, i) => {
           const diff = s.mentions - s.prevMentions;
           const trend = diff > 0 ? `<span class="trend-up">▲ +${diff}</span>` : diff < 0 ? `<span class="trend-down">▼ ${diff}</span>` : '<span class="trend-flat">—</span>';
           return `<div class="rank-row"><div class="rank-num">${i + 1}</div>
-            <div class="rank-main"><div class="rank-title">${h(s.name)} <span class="muted small">· ${s.mentions} mentions · ${trend} vs prior ${$$('.seg .active', view)[0]?.textContent || ''}</span></div>
+            <div class="rank-main"><div class="rank-title">${h(s.name)} <span class="muted small">· ${s.mentions} mentions · ${trend} vs prior ${$$('.seg .active', view)[0]?.textContent || ''}</span>${sparkline(history, s.id)}</div>
             <div class="bar-track"><div class="bar-fill" style="width:${Math.round((s.mentions / max) * 100)}%"></div></div>
             ${s.topPost ? `<div class="rank-meta">Top thread: ${h(s.topPost)}</div>` : ''}</div>
             <div class="rank-actions"><button class="btn btn-sm" data-idea="${h(s.name)} review">💡 Ideas</button></div></div>`;
         }).join('')
       : '<div class="empty">No site mentions found in this window.</div>';
+    if (history.length < 2) {
+      $('#s-list').insertAdjacentHTML('beforeend', '<div class="empty small">Momentum sparklines appear once the app has collected snapshots on 2+ different days.</div>');
+    }
     $$('[data-idea]', view).forEach((b) => b.addEventListener('click', () => openIdeas(b.dataset.idea)));
   }));
 };
@@ -347,8 +488,55 @@ renderers.ideas = async function () {
       <div class="card idea-block"><h2>🎬 YouTube titles</h2>${list(r.youtubeTitles)}<h2>Opening hooks</h2>${list(r.youtubeHooks)}</div>
       <div class="card idea-block"><h2>✉️ Email subject lines</h2>${list(r.emailSubjects)}</div>
       <div class="card idea-block"><h2>🧱 SEO article outline</h2>${list(r.outline)}
-        <div class="toolbar"><button class="btn" id="idea-md">⬇ Export brief (.md)</button><button class="btn btn-primary" id="idea-to-cal">📅 Add to Content Planner</button></div></div>`;
+        <div class="toolbar"><button class="btn" id="idea-md">⬇ Export brief (.md)</button><button class="btn btn-primary" id="idea-to-cal">📅 Add to Content Planner</button></div></div>
+      <div class="card idea-block"><h2>🤖 AI draft writer</h2>
+        <p class="muted small">Turns this brief into a complete first draft with Claude. Uses your API key from Settings — drafts are marked with [VERIFY] where you must confirm earnings figures before publishing.</p>
+        <div class="toolbar">
+          <select id="draft-type"><option value="blog">Blog post</option><option value="video">YouTube script</option><option value="email">Newsletter email</option></select>
+          <button class="btn btn-primary" id="draft-go">✍️ Write full draft</button>
+          <button class="btn hidden" id="draft-save">⬇ Save .md</button>
+          <button class="btn hidden" id="draft-copy">📋 Copy</button>
+        </div>
+        <div id="draft-output" class="draft-output hidden"></div></div>`;
     $$('.copy-line', view).forEach((li) => li.addEventListener('click', () => copyText(li.dataset.copy)));
+
+    $('#draft-go').addEventListener('click', async () => {
+      const settings = await api.getSettings();
+      if (!settings.aiApiKey) {
+        toast('Add your Claude API key in Settings first');
+        showView('settings');
+        return;
+      }
+      const btn = $('#draft-go');
+      const out = $('#draft-output');
+      btn.disabled = true;
+      btn.innerHTML = '<span class="spinner">◐</span> Writing…';
+      out.classList.remove('hidden');
+      out.textContent = '';
+      api.onDraftChunk((text) => {
+        out.textContent += text;
+        out.scrollTop = out.scrollHeight;
+      });
+      try {
+        const draft = await api.aiDraft({
+          topic: r.topic,
+          site: $('#idea-site').value || null,
+          contentType: $('#draft-type').value,
+          outline: r.outline
+        });
+        out.textContent = draft;
+        $('#draft-save').classList.remove('hidden');
+        $('#draft-copy').classList.remove('hidden');
+        $('#draft-save').onclick = () => download(`draft-${r.topic.toLowerCase().replace(/[^a-z0-9]+/g, '-').slice(0, 50)}.md`, draft, 'text/markdown');
+        $('#draft-copy').onclick = () => copyText(draft);
+        toast('Draft complete — review [VERIFY] markers before publishing');
+      } catch (err) {
+        out.textContent = `Draft failed: ${err.message}`;
+      } finally {
+        btn.disabled = false;
+        btn.textContent = '✍️ Write full draft';
+      }
+    });
     $('#idea-md').addEventListener('click', () => {
       download(`brief-${r.topic.toLowerCase().replace(/[^a-z0-9]+/g, '-').slice(0, 50)}.md`,
         `# Content brief: ${r.topic}\n\n## Blog titles\n${r.blogTitles.map((t) => `- ${t}`).join('\n')}\n\n## YouTube titles\n${r.youtubeTitles.map((t) => `- ${t}`).join('\n')}\n\n## Hooks\n${r.youtubeHooks.map((t) => `- ${t}`).join('\n')}\n\n## Email subjects\n${r.emailSubjects.map((t) => `- ${t}`).join('\n')}\n\n## Outline\n${r.outline.map((t) => `- ${t}`).join('\n')}\n`,
@@ -596,6 +784,7 @@ renderers.settings = async function () {
   const view = $('#view-settings');
   const settings = await api.getSettings();
   const providers = await api.volumeProviders();
+  const aiModels = await api.aiModels();
   view.innerHTML = `<h1>Settings</h1><p class="subtitle">Data sources and refresh behavior.</p>
     <div class="card"><h2>Reddit data</h2>
       <div class="field"><label>Subreddits to scan (comma-separated, no r/)</label>
@@ -609,6 +798,12 @@ renderers.settings = async function () {
       <div class="form-grid">
         <div class="field"><label>Provider</label><select id="set-provider">${providers.map((p) => `<option value="${h(p.id)}" ${p.id === settings.volumeProvider ? 'selected' : ''}>${h(p.label)}</option>`).join('')}</select></div>
         <div class="field"><label>API key</label><input id="set-key" type="password" value="${h(settings.volumeApiKey)}" placeholder="paste key…"></div>
+      </div></div>
+    <div class="card"><h2>🤖 AI draft writer (optional)</h2>
+      <p class="muted small">Powers the "Write full draft" button in the Idea Generator. Get an API key at <span class="mono">platform.claude.com</span> — usage is pay-as-you-go and billed to your own account. The key is stored only on this computer.</p>
+      <div class="form-grid">
+        <div class="field"><label>Claude API key</label><input id="set-ai-key" type="password" value="${h(settings.aiApiKey)}" placeholder="sk-ant-…"></div>
+        <div class="field"><label>Model</label><select id="set-ai-model">${aiModels.map((m) => `<option value="${h(m.id)}" ${m.id === settings.aiModel ? 'selected' : ''}>${h(m.label)}</option>`).join('')}</select></div>
       </div></div>`;
 
   $('#set-save').addEventListener('click', async () => {
@@ -616,7 +811,9 @@ renderers.settings = async function () {
       subreddits: $('#set-subs').value.split(',').map((s) => s.trim()).filter(Boolean),
       cacheTtlHours: Math.max(1, parseInt($('#set-ttl').value, 10) || 6),
       volumeProvider: $('#set-provider').value,
-      volumeApiKey: $('#set-key').value.trim()
+      volumeApiKey: $('#set-key').value.trim(),
+      aiApiKey: $('#set-ai-key').value.trim(),
+      aiModel: $('#set-ai-model').value
     });
     toast('Settings saved');
   });

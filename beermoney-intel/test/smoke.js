@@ -61,6 +61,23 @@ app.whenReady().then(async () => {
   ipcMain.handle('settings:set', (_e, patch) => store.setSettings(patch));
   ipcMain.handle('app:openExternal', (_e, { url }) => { if (/^https?:/.test(url)) shell.openExternal(url); });
 
+  const { scoreOpportunities } = require('../lib/opportunity');
+  const ai = require('../lib/providers/ai');
+  ipcMain.handle('opps:list', async (_e, { days }) => {
+    const d = await reddit.getPosts();
+    return { source: d.source, items: scoreOpportunities(analyze.topQuestions(d.posts, days, { limit: 40 }), [], {}, { windowDays: days }) };
+  });
+  ipcMain.handle('intel:siteHistory', () => [
+    { date: '2026-06-01', counts: { swagbucks: 3, prolific: 5 } },
+    { date: '2026-06-05', counts: { swagbucks: 6, prolific: 4 } },
+    { date: '2026-06-10', counts: { swagbucks: 4, prolific: 7 } }
+  ]);
+  ipcMain.handle('ai:models', () => ai.MODELS);
+  ipcMain.handle('serp:check', () => { throw new Error('no network in smoke test'); });
+  ipcMain.handle('pain:mine', () => { throw new Error('no network in smoke test'); });
+  ipcMain.handle('feeds:fetchAll', () => []);
+  ipcMain.handle('ai:draft', () => { throw new Error('no key in smoke test'); });
+
   const win = new BrowserWindow({
     width: 1280,
     height: 840,
@@ -80,7 +97,7 @@ app.whenReady().then(async () => {
   await new Promise((r) => setTimeout(r, 2500));
 
   const shots = [];
-  const views = ['dashboard', 'questions', 'sites-rank', 'reputation', 'ideas'];
+  const views = ['dashboard', 'opportunities', 'questions', 'sites-rank', 'painpoints', 'competitors', 'reputation', 'ideas', 'settings'];
   for (const v of views) {
     await win.webContents.executeJavaScript(`document.querySelector('[data-view="${v}"]').click()`);
     if (v === 'ideas') {
