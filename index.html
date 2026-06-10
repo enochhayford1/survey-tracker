@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Survey Earnings Tracker</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header class="app-header">
+    <div class="header-row">
+      <h1>💰 Survey Earnings Tracker</h1>
+      <button id="manage-platforms-btn" class="btn btn-ghost" type="button">⚙ Platforms &amp; Settings</button>
+    </div>
+    <div class="summary-cards" id="summary-cards"></div>
+  </header>
+
+  <main>
+    <section class="card" aria-labelledby="add-entry-title">
+      <h2 id="add-entry-title">Add earning</h2>
+      <form id="entry-form" class="entry-form">
+        <div class="field">
+          <label for="amount-input">Amount</label>
+          <div class="amount-wrap">
+            <span class="currency-prefix" id="currency-prefix">$</span>
+            <input id="amount-input" type="number" step="0.01" min="0.01" placeholder="0.00" required>
+          </div>
+        </div>
+        <div class="field">
+          <label for="platform-select">Platform</label>
+          <select id="platform-select" required></select>
+        </div>
+        <div class="field">
+          <label for="datetime-input">Date &amp; time</label>
+          <input id="datetime-input" type="datetime-local" required>
+        </div>
+        <button type="submit" class="btn btn-primary">Add</button>
+      </form>
+      <p class="hint hidden" id="no-platform-hint">
+        You have no platforms yet — click <strong>⚙ Platforms &amp; Settings</strong> to add one.
+      </p>
+    </section>
+
+    <section class="card" aria-labelledby="period-title">
+      <div class="period-header">
+        <h2 id="period-title">Earnings</h2>
+        <div class="view-tabs" id="view-tabs" role="tablist">
+          <button class="tab" data-view="daily" role="tab">Daily</button>
+          <button class="tab" data-view="weekly" role="tab">Weekly</button>
+          <button class="tab" data-view="monthly" role="tab">Monthly</button>
+          <button class="tab" data-view="yearly" role="tab">Yearly</button>
+        </div>
+      </div>
+      <div class="period-nav">
+        <button id="prev-period" class="btn btn-ghost" type="button" aria-label="Previous period">‹</button>
+        <div class="period-info">
+          <div id="period-label" class="period-label"></div>
+          <div id="period-total" class="period-total"></div>
+        </div>
+        <button id="next-period" class="btn btn-ghost" type="button" aria-label="Next period">›</button>
+        <button id="today-btn" class="btn btn-ghost" type="button">Today</button>
+      </div>
+      <div id="chart" class="chart" role="img" aria-label="Earnings chart"></div>
+    </section>
+
+    <section class="card" aria-labelledby="breakdown-title">
+      <h2 id="breakdown-title">Platform breakdown <span class="muted" id="breakdown-period"></span></h2>
+      <div id="breakdown" class="breakdown"></div>
+    </section>
+
+    <section class="card" aria-labelledby="entries-title">
+      <div class="entries-header">
+        <h2 id="entries-title">Entries <span class="muted" id="entries-period"></span></h2>
+        <button id="export-csv-btn" class="btn btn-ghost" type="button">⬇ Export CSV</button>
+      </div>
+      <div id="entries-list" class="entries-list"></div>
+    </section>
+  </main>
+
+  <dialog id="edit-dialog">
+    <form id="edit-form" method="dialog" class="dialog-form">
+      <h2>Edit entry</h2>
+      <div class="field">
+        <label for="edit-amount">Amount</label>
+        <input id="edit-amount" type="number" step="0.01" min="0.01" required>
+      </div>
+      <div class="field">
+        <label for="edit-platform">Platform</label>
+        <select id="edit-platform" required></select>
+      </div>
+      <div class="field">
+        <label for="edit-datetime">Date &amp; time</label>
+        <input id="edit-datetime" type="datetime-local" required>
+      </div>
+      <div class="dialog-actions">
+        <button type="button" class="btn btn-ghost" id="edit-cancel">Cancel</button>
+        <button type="submit" class="btn btn-primary">Save</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="platforms-dialog">
+    <div class="dialog-form">
+      <h2>Platforms &amp; settings</h2>
+      <form id="add-platform-form" class="add-platform-form">
+        <input id="new-platform-input" type="text" placeholder="e.g. Prolific, Swagbucks…" maxlength="40" required>
+        <button type="submit" class="btn btn-primary">Add</button>
+      </form>
+      <ul id="platforms-list" class="platforms-list"></ul>
+      <div class="field">
+        <label for="currency-input">Currency symbol</label>
+        <input id="currency-input" type="text" maxlength="4">
+      </div>
+      <div class="dialog-actions">
+        <button type="button" class="btn btn-primary" id="platforms-close">Done</button>
+      </div>
+    </div>
+  </dialog>
+
+  <script src="app.js"></script>
+</body>
+</html>
