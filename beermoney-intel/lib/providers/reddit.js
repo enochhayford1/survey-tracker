@@ -1,31 +1,10 @@
 'use strict';
 
-const { getJson } = require('../fetch');
 const store = require('../store');
+const { getRedditJson } = require('./reddit-fetch');
 
 const MAX_PAGES_PER_SUB = 8; // 8 x 100 posts covers ~90 days for these subs
 const WINDOW_DAYS = 92;
-
-// Reddit sometimes blocks one mirror while another still serves public JSON.
-// Remember which host worked so subsequent pages don't re-probe.
-const HOSTS = ['https://www.reddit.com', 'https://old.reddit.com', 'https://api.reddit.com'];
-let workingHost = null;
-
-async function getRedditJson(path) {
-  const hosts = workingHost ? [workingHost, ...HOSTS.filter((h) => h !== workingHost)] : HOSTS;
-  let lastError;
-  for (const host of hosts) {
-    try {
-      const json = await getJson(`${host}${path}`);
-      workingHost = host;
-      return json;
-    } catch (err) {
-      lastError = err;
-      workingHost = null;
-    }
-  }
-  throw lastError;
-}
 
 function pickFields(child) {
   const d = child.data;

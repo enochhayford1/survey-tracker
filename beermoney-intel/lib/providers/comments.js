@@ -1,6 +1,6 @@
 'use strict';
 
-const { getJson } = require('../fetch');
+const { getRedditJson } = require('./reddit-fetch');
 
 /** Recursively collect comment bodies from a Reddit comment listing. */
 function collectBodies(children, out, cap) {
@@ -17,9 +17,8 @@ function collectBodies(children, out, cap) {
 
 /** Fetch comment text for a Reddit post permalink (e.g. "/r/beermoney/comments/abc/title/"). */
 async function fetchComments(permalink, { cap = 200 } = {}) {
-  const clean = permalink.replace(/\/?$/, '/');
-  const url = `https://www.reddit.com${clean}.json?raw_json=1&limit=200&depth=4`;
-  const json = await getJson(url, { timeoutMs: 15000 });
+  const clean = permalink.replace(/\/+$/, '');
+  const json = await getRedditJson(`${clean}.json?raw_json=1&limit=200&depth=4`);
   const out = [];
   collectBodies(json?.[1]?.data?.children, out, cap);
   return out;

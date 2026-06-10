@@ -1034,6 +1034,17 @@ renderers.settings = async function () {
       <input id="set-ttl" type="number" min="1" max="48" value="${h(settings.cacheTtlHours)}" style="width:90px"></div>
       <div class="toolbar"><button class="btn btn-primary" id="set-save">Save</button>
       <button class="btn" id="set-refresh">🔄 Force refresh data now</button></div></div>
+    <div class="card"><h2>🔑 Reddit API credentials (recommended if data won't load)</h2>
+      <p class="muted small">Reddit blocks anonymous data access from many networks (HTTP 403). The permanent fix is free official API access — takes 2 minutes:</p>
+      <ol class="muted small" style="margin:6px 0 12px;padding-left:20px">
+        <li>Log in to Reddit, open <span class="mono">reddit.com/prefs/apps</span></li>
+        <li>Click <strong>create another app…</strong>, choose type <strong>script</strong>, any name, redirect URI <span class="mono">http://localhost</span></li>
+        <li>Copy the <strong>client ID</strong> (the short string under the app name) and the <strong>secret</strong> into the fields below, Save, then Force refresh</li>
+      </ol>
+      <div class="form-grid">
+        <div class="field"><label>Client ID</label><input id="set-reddit-id" value="${h(settings.redditClientId)}" placeholder="e.g. AbCdEf12345"></div>
+        <div class="field"><label>Client secret</label><input id="set-reddit-secret" type="password" value="${h(settings.redditClientSecret)}" placeholder="paste secret…"></div>
+      </div></div>
     <div class="card"><h2>Search volume provider (optional, paid)</h2>
       <p class="muted small">The app works fully on free sources. To see real monthly search volumes in the Keyword Explorer, pick a provider and paste its API key. Adding new providers is documented in <span class="mono">lib/providers/index.js</span>.</p>
       <div class="form-grid">
@@ -1062,6 +1073,8 @@ renderers.settings = async function () {
     await api.setSettings({
       subreddits: $('#set-subs').value.split(',').map((s) => s.trim()).filter(Boolean),
       cacheTtlHours: Math.max(1, parseInt($('#set-ttl').value, 10) || 6),
+      redditClientId: $('#set-reddit-id').value.trim(),
+      redditClientSecret: $('#set-reddit-secret').value.trim(),
       volumeProvider: $('#set-provider').value,
       volumeApiKey: $('#set-key').value.trim(),
       aiApiKey: $('#set-ai-key').value.trim(),
